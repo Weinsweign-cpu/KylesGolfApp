@@ -1,65 +1,146 @@
-import Image from "next/image";
+type DGPlayer = {
+  dg_id: number;
+  player_name: string;
+  win: number;
+  top_5: number;
+  top_10: number;
+  top_20: number;
+  make_cut: number;
+};
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+type DGResponse = {
+  event_name?: string;
+  course?: string;
+  last_updated?: string;
+  baseline?: DGPlayer[];
+  baseline_history_fit?: DGPlayer[];
+};
+
+function formatName(dgName: string): string {
+  if (!dgName.includes(',')) return dgName;
+  const [last, rest] = dgName.split(',', 2);
+  return rest.trim() + ' ' + last.trim();
+}
+
+function pct(n: number | undefined): string {
+  if (n == null || isNaN(n)) return '—';
+  return (n * 100).toFixed(1) + '%';
+}
+
+async function fetchPredictions(): Promise<DGResponse | { error: string }> {
+  const key = process.env.DATAGOLF_API_KEY;
+  if (!key) return { error: 'DATAGOLF_API_KEY not set in .env.local' };
+
+  const url = `https://feeds.datagolf.com/preds/pre-tournament?tour=pga&odds_format=percent&file_format=json&key=${key}`;
+
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return { error: 'DataGolf API returned ' + res.status };
+    const data = await res.json();
+    return data;
+  } catch (e) {
+    return { error: 'Fetch failed: ' + (e instanceof Error ? e.message : 'unknown') };
+  }
+}
+
+export default async function PredictionsPage() {
+  const data = await fetchPredictions();
+
+  if ('error' in data) {
+    return (
+      <main style={{ padding: '40px', maxWidth: '900px' }}>
+        <h1 className="font-display" style={{ fontSize: '32px', fontWeight: 600, marginBottom: '16px' }}>
+          Predictions
+        </h1>
+        <div style={{
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          padding: '24px',
+        }}>
+          <div className="font-mono" style={{ color: 'var(--negative)', fontSize: '12px', marginBottom: '8px' }}>
+            ERROR
+          </div>
+          <div>{data.error}</div>
         </div>
       </main>
-    </div>
+    );
+  }
+
+  const players = data.baseline_history_fit ?? data.baseline ?? [];
+  const sorted = [...players].sort((a, b) => b.win - a.win);
+  const winSum = sorted.reduce((s, p) => s + (p.win || 0), 0);
+
+  return (
+    <main style={{ padding: '40px', maxWidth: '1100px', margin: '0 auto' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <div className="font-mono" style={{
+          fontSize: '11px',
+          color: 'var(--text-tertiary)',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          marginBottom: '6px',
+        }}>
+          DataGolf · PGA Tour
+        </div>
+        <h1 className="font-display" style={{
+          fontSize: '40px',
+          fontWeight: 600,
+          letterSpacing: '-0.02em',
+          margin: 0,
+        }}>
+          {data.event_name ?? 'No active event'}
+        </h1>
+        <div className="font-mono" style={{
+          fontSize: '13px',
+          color: 'var(--text-secondary)',
+          marginTop: '6px',
+        }}>
+          {data.course ?? ''}{data.last_updated ? ' · Last updated ' + new Date(data.last_updated).toLocaleString() : ''}
+        </div>
+      </div>
+
+      <div style={{
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border)',
+        borderRadius: '12px',
+        overflow: 'hidden',
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+          <thead style={{ background: 'var(--bg-tertiary)' }}>
+            <tr>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', width: '50px' }}>#</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Player</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Win</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Top 5</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Top 10</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Top 20</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Make Cut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((p, i) => (
+              <tr key={p.dg_id} style={{ borderTop: '1px solid var(--border)' }}>
+                <td className="font-mono tabular" style={{ padding: '12px 16px', color: 'var(--text-tertiary)' }}>{i + 1}</td>
+                <td style={{ padding: '12px 16px' }}>{formatName(p.player_name)}</td>
+                <td className="font-mono tabular" style={{ padding: '12px 16px', textAlign: 'right' }}>{pct(p.win)}</td>
+                <td className="font-mono tabular" style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>{pct(p.top_5)}</td>
+                <td className="font-mono tabular" style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>{pct(p.top_10)}</td>
+                <td className="font-mono tabular" style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>{pct(p.top_20)}</td>
+                <td className="font-mono tabular" style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>{pct(p.make_cut)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="font-mono" style={{
+        marginTop: '16px',
+        fontSize: '11px',
+        color: 'var(--text-tertiary)',
+      }}>
+        {sorted.length} players · Win % sum: {(winSum * 100).toFixed(1)}% (target ≈ 100%)
+      </div>
+    </main>
   );
 }

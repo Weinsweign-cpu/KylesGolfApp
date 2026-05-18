@@ -1,26 +1,31 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --bg-primary: #0A0C10;
+  --bg-secondary: #111318;
+  --bg-tertiary: #1A1D25;
+  --bg-hover: #1E2235;
+  --border: #1E2130;
+  --text-primary: #F0F4FF;
+  --text-secondary: #8B92A5;
+  --text-tertiary: #4A5168;
+  --edge: #3B7BF5;
+  --positive: #10B981;
+  --negative: #EF4444;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-feature-settings: "ss01", "ss02";
+  margin: 0;
 }
+
+.font-display { font-family: 'Syne', system-ui, sans-serif; }
+.font-mono { font-family: 'IBM Plex Mono', monospace; }
+.tabular { font-variant-numeric: tabular-nums; }
