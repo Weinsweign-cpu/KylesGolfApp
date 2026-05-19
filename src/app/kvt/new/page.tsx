@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { getPickableEvents } from '@/lib/datagolf';
 import NewTournamentForm from '@/components/kvt/NewTournamentForm';
 

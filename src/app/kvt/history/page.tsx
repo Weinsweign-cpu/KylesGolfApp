@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { getTournaments } from '@/lib/kvt/db';
 import HistoryView from '@/components/kvt/HistoryView';
 

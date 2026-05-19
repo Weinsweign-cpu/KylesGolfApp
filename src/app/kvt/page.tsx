@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { getActiveTournament, getKvtMatchups } from '@/lib/kvt/db';
 import ActiveBetView from '@/components/kvt/ActiveBetView';
 import Link from 'next/link';

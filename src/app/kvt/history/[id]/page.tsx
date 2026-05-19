@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { getTournamentById, getKvtMatchups } from '@/lib/kvt/db';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';

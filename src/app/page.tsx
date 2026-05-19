@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { getPgaSchedule } from '@/lib/datagolf';
 import PredictionsView from '@/components/PredictionsView';
 
