@@ -6,16 +6,16 @@
 
 :root {
   --bg-primary: #0A0C10;
-  --bg-secondary: #111318;
-  --bg-tertiary: #1A1D25;
-  --bg-hover: #1E2235;
-  --border: #1E2130;
-  --text-primary: #F0F4FF;
-  --text-secondary: #8B92A5;
-  --text-tertiary: #4A5168;
-  --edge: #3B7BF5;
-  --positive: #10B981;
-  --negative: #EF4444;
+  --bg-secondary: #12151C;
+  --bg-tertiary: #1C2030;
+  --bg-hover: #222740;
+  --border: #252C40;
+  --text-primary: #EDF1FF;
+  --text-secondary: #9BA3BC;
+  --text-tertiary: #626A85;
+  --edge: #5B8BF8;
+  --positive: #34D399;
+  --negative: #F87171;
 }
 
 body {
