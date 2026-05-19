@@ -4,6 +4,12 @@ import { usePathname } from 'next/navigation';
 
 const NAV = [
   {
+    label: 'AI',
+    items: [
+      { href: '/ask', label: 'Ask Someone Smarter Than Tommy' },
+    ],
+  },
+  {
     label: 'GOLF BETTING',
     items: [
       { href: '/', label: 'Predictions' },
@@ -68,13 +74,14 @@ export default function Sidebar() {
                 style={{
                   display: 'block',
                   padding: '7px 10px',
-                  fontSize: '13px',
+                  fontSize: section.label === 'AI' ? '11px' : '13px',
                   borderRadius: '5px',
                   textDecoration: 'none',
                   marginBottom: '1px',
                   color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
                   background: active ? 'var(--bg-tertiary)' : 'transparent',
                   fontWeight: active ? 500 : 400,
+                  lineHeight: 1.35,
                 }}
               >
                 {item.label}

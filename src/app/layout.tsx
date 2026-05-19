@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Syne, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import Sidebar from "@/components/Sidebar";
+import FloatingButton from "@/components/ask/FloatingButton";
 import "./globals.css";
 
 const syne = Syne({ variable: "--font-display", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <div style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
           {children}
         </div>
+        <FloatingButton />
       </body>
     </html>
   );
