@@ -636,6 +636,8 @@ export async function getOutrights(market: OutrightMarket): Promise<OutrightMark
       odds_by_book.sort((a, b) => b.ev - a.ev);
 
       const best = odds_by_book[0];
+      // Skip longshots over +1000 American (11.0 decimal)
+      if (best.decimal_odds > 11.0) continue;
       picks.push({
         dg_id: Number(entry.dg_id),
         player_name: String(entry.player_name ?? ''),
