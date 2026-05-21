@@ -108,6 +108,61 @@ function MatchupCard({ result }: { result: TournamentResult['matchup_results'][0
   );
 }
 
+function FinalizedView({ tournament, matchups }: { tournament: KvtTournament; matchups: KvtMatchup[] }) {
+  const net = tournament.final_net_to_kyle ?? 0;
+  const netColor = net > 0 ? 'var(--positive)' : net < 0 ? 'var(--negative)' : 'var(--text-secondary)';
+  const netLabel = net > 0 ? `Kyle +$${net.toFixed(2)}` : net < 0 ? `Tommy +$${Math.abs(net).toFixed(2)}` : 'Even';
+
+  function formatN(n: string) {
+    if (!n.includes(',')) return n;
+    const [last, rest] = n.split(',', 2);
+    return rest.trim() + ' ' + last.trim();
+  }
+
+  return (
+    <main style={{ padding: '40px', maxWidth: '900px', margin: '0 auto' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
+          Kyle vs Tommy · Result
+        </div>
+        <h1 className="font-display" style={{ fontSize: '36px', fontWeight: 600, letterSpacing: '-0.02em', margin: '0 0 4px' }}>
+          {tournament.event_name}
+        </h1>
+        {tournament.course && (
+          <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{tournament.course}</div>
+        )}
+      </div>
+
+      <div style={{ marginBottom: '24px', padding: '20px 24px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+        <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>Final Result</div>
+        <div className="font-display tabular" style={{ fontSize: '44px', fontWeight: 700, color: netColor, lineHeight: 1, letterSpacing: '-0.02em' }}>
+          {netLabel}
+        </div>
+        {tournament.finalized_at && (
+          <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '8px' }}>
+            Finalized {tournament.finalized_at.slice(0, 10)}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '12px' }}>
+        {matchups.map(m => (
+          <div key={m.matchup_num} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px' }}>
+            <div className="font-mono" style={{ fontSize: '9px', color: 'var(--text-tertiary)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '10px' }}>
+              Matchup {m.matchup_num}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{formatN(m.kyle_player_name)}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontFamily: 'IBM Plex Mono, monospace' }}>vs</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{formatN(m.tommy_player_name)}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </main>
+  );
+}
+
 export default function ActiveBetView({ tournament, matchups, readOnly }: { tournament: KvtTournament; matchups: KvtMatchup[]; readOnly?: boolean }) {
   const router = useRouter();
   const [result, setResult] = useState<ResultWithMeta | null>(null);
@@ -115,6 +170,8 @@ export default function ActiveBetView({ tournament, matchups, readOnly }: { tour
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [finalizing, setFinalizing] = useState(false);
   const [mismatchWarning, setMismatchWarning] = useState(false);
+
+  const isFinalized = tournament.status === 'finalized';
 
   const fetchResult = useCallback(async () => {
     setLoading(true);
@@ -131,7 +188,14 @@ export default function ActiveBetView({ tournament, matchups, readOnly }: { tour
     }
   }, [tournament.id]);
 
-  useEffect(() => { fetchResult(); }, [fetchResult]);
+  useEffect(() => {
+    if (readOnly && isFinalized) return;
+    fetchResult();
+  }, [fetchResult, readOnly, isFinalized]);
+
+  if (readOnly && isFinalized) {
+    return <FinalizedView tournament={tournament} matchups={matchups} />;
+  }
 
   async function handleFinalize() {
     if (!confirm('Finalize this tournament? This moves it to history.')) return;
