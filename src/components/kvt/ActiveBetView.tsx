@@ -198,10 +198,19 @@ export default function ActiveBetView({ tournament, matchups, readOnly }: { tour
   }
 
   async function handleFinalize() {
-    if (!confirm('Finalize this tournament? This moves it to history.')) return;
+    const computed = result?.net_to_kyle;
+    const defaultVal = computed != null ? String(computed) : '0';
+    const input = prompt(
+      `Final net to Kyle (positive = Kyle wins, negative = Tommy wins).\nComputed from live data: ${computed != null ? '$' + computed.toFixed(2) : 'unavailable'}\n\nEnter the correct amount or leave as-is:`,
+      defaultVal
+    );
+    if (input === null) return; // cancelled
+    const net = Number(input);
+    if (isNaN(net)) { alert('Invalid number'); return; }
+    if (!confirm(`Finalize with Kyle net = $${net.toFixed(2)}? This moves it to history.`)) return;
     setFinalizing(true);
     try {
-      await fetch(`/api/kvt/finalize?id=${tournament.id}`, { method: 'POST' });
+      await fetch(`/api/kvt/finalize?id=${tournament.id}&net=${net}`, { method: 'POST' });
       router.push('/kvt/history');
     } finally {
       setFinalizing(false);
@@ -335,7 +344,7 @@ export default function ActiveBetView({ tournament, matchups, readOnly }: { tour
           </div>
 
           {/* Finalize button */}
-          {result.tournament_complete && !readOnly && (
+          {!readOnly && (
             <button
               onClick={handleFinalize}
               disabled={finalizing}

@@ -4,11 +4,21 @@ import { getGolferPerformances } from '@/lib/kvt/data';
 import { computeTournament, type MatchupInput } from '@/lib/kvt/scoring';
 
 export async function POST(req: Request) {
-  const id = Number(new URL(req.url).searchParams.get('id'));
+  const url = new URL(req.url);
+  const id = Number(url.searchParams.get('id'));
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
   const tournament = getTournamentById(id);
   if (!tournament) return NextResponse.json({ error: 'not found' }, { status: 404 });
+
+  // Allow manual net override (for historical tournaments where live data is wrong)
+  const netOverride = url.searchParams.get('net');
+  if (netOverride !== null) {
+    const net = Number(netOverride);
+    if (isNaN(net)) return NextResponse.json({ error: 'invalid net value' }, { status: 400 });
+    finalizeTournament(id, net);
+    return NextResponse.json({ net_to_kyle: net });
+  }
 
   const matchups = getKvtMatchups(id);
 
