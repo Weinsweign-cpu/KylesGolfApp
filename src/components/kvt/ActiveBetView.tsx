@@ -113,6 +113,12 @@ function FinalizedView({ tournament, matchups }: { tournament: KvtTournament; ma
   const netColor = net > 0 ? 'var(--positive)' : net < 0 ? 'var(--negative)' : 'var(--text-secondary)';
   const netLabel = net > 0 ? `Kyle +$${net.toFixed(2)}` : net < 0 ? `Tommy +$${Math.abs(net).toFixed(2)}` : 'Even';
 
+  // Parse stored results if available — gives us full round-by-round detail
+  let storedResult: TournamentResult | null = null;
+  if (tournament.final_results_json) {
+    try { storedResult = JSON.parse(tournament.final_results_json) as TournamentResult; } catch { /* bad json */ }
+  }
+
   function formatN(n: string) {
     if (!n.includes(',')) return n;
     const [last, rest] = n.split(',', 2);
@@ -133,32 +139,94 @@ function FinalizedView({ tournament, matchups }: { tournament: KvtTournament; ma
         )}
       </div>
 
-      <div style={{ marginBottom: '24px', padding: '20px 24px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px' }}>
-        <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>Final Result</div>
-        <div className="font-display tabular" style={{ fontSize: '44px', fontWeight: 700, color: netColor, lineHeight: 1, letterSpacing: '-0.02em' }}>
-          {netLabel}
+      {/* Net summary */}
+      <div style={{ marginBottom: '24px', padding: '20px 24px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+        <div>
+          <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>Final Result</div>
+          <div className="font-display tabular" style={{ fontSize: '44px', fontWeight: 700, color: netColor, lineHeight: 1, letterSpacing: '-0.02em' }}>
+            {netLabel}
+          </div>
+          {tournament.finalized_at && (
+            <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '8px' }}>
+              Finalized {tournament.finalized_at.slice(0, 10)}
+            </div>
+          )}
         </div>
-        {tournament.finalized_at && (
-          <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '8px' }}>
-            Finalized {tournament.finalized_at.slice(0, 10)}
+        {storedResult && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              Matchups: <span style={{ color: 'var(--text-primary)' }}>{dollars(storedResult.matchup_total_to_kyle)}</span>
+            </div>
+            <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              Low Score: <span style={{ color: storedResult.low_score.dollars_to_kyle > 0 ? 'var(--positive)' : storedResult.low_score.dollars_to_kyle < 0 ? 'var(--negative)' : 'var(--text-tertiary)' }}>
+                {storedResult.low_score.dollars_to_kyle !== 0 ? dollars(storedResult.low_score.dollars_to_kyle) : '—'}
+              </span>
+            </div>
+            <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              Tournament Winner: <span style={{ color: storedResult.tournament_winner.dollars_to_kyle > 0 ? 'var(--positive)' : storedResult.tournament_winner.dollars_to_kyle < 0 ? 'var(--negative)' : 'var(--text-tertiary)' }}>
+                {storedResult.tournament_winner.dollars_to_kyle !== 0 ? dollars(storedResult.tournament_winner.dollars_to_kyle) : '—'}
+              </span>
+            </div>
           </div>
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '12px' }}>
-        {matchups.map(m => (
-          <div key={m.matchup_num} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px' }}>
-            <div className="font-mono" style={{ fontSize: '9px', color: 'var(--text-tertiary)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '10px' }}>
-              Matchup {m.matchup_num}
+      {/* Full matchup detail if we have stored results */}
+      {storedResult ? (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+            {storedResult.matchup_results.map(mr => (
+              <MatchupCard key={mr.matchup_num} result={mr} />
+            ))}
+          </div>
+
+          {/* Low score + tournament winner */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px' }}>
+              <div className="font-mono" style={{ fontSize: '9px', color: 'var(--text-tertiary)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '8px' }}>Low Score ($20)</div>
+              {storedResult.low_score.player_name ? (
+                <>
+                  <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{storedResult.low_score.player_name}</div>
+                  <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    {scoreStr(storedResult.low_score.score)} total · owned by {storedResult.low_score.owner === 'void' ? 'both' : storedResult.low_score.owner}
+                  </div>
+                  <div className="font-mono" style={{ fontSize: '13px', fontWeight: 600, color: storedResult.low_score.dollars_to_kyle > 0 ? 'var(--positive)' : storedResult.low_score.dollars_to_kyle < 0 ? 'var(--negative)' : 'var(--text-tertiary)' }}>
+                    {storedResult.low_score.dollars_to_kyle !== 0 ? dollars(storedResult.low_score.dollars_to_kyle) : 'Tied — $0'}
+                  </div>
+                </>
+              ) : (
+                <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>No data</div>
+              )}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{formatN(m.kyle_player_name)}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontFamily: 'IBM Plex Mono, monospace' }}>vs</div>
-              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{formatN(m.tommy_player_name)}</div>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px' }}>
+              <div className="font-mono" style={{ fontSize: '9px', color: 'var(--text-tertiary)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '8px' }}>Tournament Winner ($20)</div>
+              <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{storedResult.tournament_winner.player_name}</div>
+              <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                {storedResult.tournament_winner.was_drafted ? `drafted by ${storedResult.tournament_winner.owner}` : 'not drafted'}
+              </div>
+              <div className="font-mono" style={{ fontSize: '13px', fontWeight: 600, color: storedResult.tournament_winner.dollars_to_kyle > 0 ? 'var(--positive)' : storedResult.tournament_winner.dollars_to_kyle < 0 ? 'var(--negative)' : 'var(--text-tertiary)' }}>
+                {storedResult.tournament_winner.dollars_to_kyle !== 0 ? dollars(storedResult.tournament_winner.dollars_to_kyle) : 'No payout'}
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+        </>
+      ) : (
+        /* Fallback: no stored results — show just the matchup pairs (names only) */
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '12px' }}>
+          {matchups.map(m => (
+            <div key={m.matchup_num} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px' }}>
+              <div className="font-mono" style={{ fontSize: '9px', color: 'var(--text-tertiary)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '10px' }}>
+                Matchup {m.matchup_num}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{formatN(m.kyle_player_name)}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontFamily: 'IBM Plex Mono, monospace' }}>vs</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{formatN(m.tommy_player_name)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }
@@ -210,7 +278,12 @@ export default function ActiveBetView({ tournament, matchups, readOnly }: { tour
     if (!confirm(`Finalize with Kyle net = $${net.toFixed(2)}? This moves it to history.`)) return;
     setFinalizing(true);
     try {
-      await fetch(`/api/kvt/finalize?id=${tournament.id}&net=${net}`, { method: 'POST' });
+      await fetch(`/api/kvt/finalize?id=${tournament.id}&net=${net}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Pass the current live result so history stores the full matchup detail
+        body: JSON.stringify({ results: result }),
+      });
       router.push('/kvt/history');
     } finally {
       setFinalizing(false);

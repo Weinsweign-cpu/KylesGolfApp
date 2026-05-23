@@ -30,6 +30,7 @@ export function db(): Database.Database {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       finalized_at TEXT,
       final_net_to_kyle REAL,
+      final_results_json TEXT,
       UNIQUE(dg_event_id, year)
     );
 
@@ -47,6 +48,9 @@ export function db(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_matchups_tournament ON kvt_matchups(tournament_id);
   `);
 
+  // Migration: add final_results_json to existing DBs that predate this column
+  try { _db.exec('ALTER TABLE kvt_tournaments ADD COLUMN final_results_json TEXT'); } catch { /* already exists */ }
+
   return _db;
 }
 
@@ -61,6 +65,7 @@ export type KvtTournament = {
   created_at: string;
   finalized_at: string | null;
   final_net_to_kyle: number | null;
+  final_results_json: string | null;
 };
 
 export type KvtMatchup = {
@@ -127,10 +132,10 @@ export function getKvtMatchups(tournamentId: number): KvtMatchup[] {
     .all(tournamentId) as KvtMatchup[];
 }
 
-export function finalizeTournament(id: number, netToKyle: number) {
+export function finalizeTournament(id: number, netToKyle: number, resultsJson?: string) {
   db().prepare(
-    `UPDATE kvt_tournaments SET status = 'finalized', finalized_at = datetime('now'), final_net_to_kyle = ? WHERE id = ?`
-  ).run(netToKyle, id);
+    `UPDATE kvt_tournaments SET status = 'finalized', finalized_at = datetime('now'), final_net_to_kyle = ?, final_results_json = ? WHERE id = ?`
+  ).run(netToKyle, resultsJson ?? null, id);
 }
 
 export function deleteTournament(id: number) {

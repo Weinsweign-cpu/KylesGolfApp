@@ -16,7 +16,15 @@ export async function POST(req: Request) {
   if (netOverride !== null) {
     const net = Number(netOverride);
     if (isNaN(net)) return NextResponse.json({ error: 'invalid net value' }, { status: 400 });
-    finalizeTournament(id, net);
+
+    // Try to read computed results from POST body so history has full detail
+    let resultsJson: string | undefined;
+    try {
+      const body = await req.json();
+      if (body?.results) resultsJson = JSON.stringify(body.results);
+    } catch { /* no body or invalid JSON — fine, we'll save without results */ }
+
+    finalizeTournament(id, net, resultsJson);
     return NextResponse.json({ net_to_kyle: net });
   }
 
@@ -33,7 +41,7 @@ export async function POST(req: Request) {
     }));
 
     const result = computeTournament(inputs, actual_winner_name ?? 'TBD', actual_winner_dg_id);
-    finalizeTournament(id, result.net_to_kyle);
+    finalizeTournament(id, result.net_to_kyle, JSON.stringify(result));
     return NextResponse.json({ net_to_kyle: result.net_to_kyle });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
