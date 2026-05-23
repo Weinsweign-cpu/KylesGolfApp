@@ -7,10 +7,10 @@ export async function GET(req: Request) {
   const id = Number(new URL(req.url).searchParams.get('id'));
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-  const tournament = getTournamentById(id);
+  const tournament = await getTournamentById(id);
   if (!tournament) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
-  const matchups = getKvtMatchups(id);
+  const matchups = await getKvtMatchups(id);
   if (matchups.length === 0) return NextResponse.json({ error: 'no matchups' }, { status: 404 });
 
   try {

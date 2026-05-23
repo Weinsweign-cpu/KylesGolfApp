@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/kvt/db';
+import { upsertFinalizedTournament } from '@/lib/kvt/db';
 
 const SEED_DATA = [
   {
@@ -42,36 +42,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  const conn = db();
   const results: string[] = [];
 
   for (const t of SEED_DATA) {
-    // Remove any existing tournament with this dg_event_id + year
-    const existing = conn.prepare('SELECT id FROM kvt_tournaments WHERE dg_event_id = ? AND year = ?').get(t.dg_event_id, t.year) as { id: number } | undefined;
-    if (existing) {
-      conn.prepare('DELETE FROM kvt_tournaments WHERE id = ?').run(existing.id);
-      results.push(`Deleted existing ${t.event_name} (id=${existing.id})`);
-    }
-
-    const tx = conn.transaction(() => {
-      const row = conn.prepare(`
-        INSERT INTO kvt_tournaments (dg_event_id, year, event_name, course, start_date, status, finalized_at, final_net_to_kyle)
-        VALUES (?, ?, ?, ?, ?, 'finalized', datetime('now'), ?)
-      `).run(t.dg_event_id, t.year, t.event_name, t.course, t.start_date, t.final_net_to_kyle);
-      const tid = Number(row.lastInsertRowid);
-
-      const stmt = conn.prepare(`
-        INSERT INTO kvt_matchups (tournament_id, matchup_num, kyle_dg_id, kyle_player_name, tommy_dg_id, tommy_player_name)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      for (const m of t.matchups) {
-        stmt.run(tid, m.matchup_num, m.kyle_dg_id, m.kyle_player_name, m.tommy_dg_id, m.tommy_player_name);
-      }
-      return tid;
-    });
-
-    const newId = tx();
-    results.push(`Created ${t.event_name} (id=${newId}, net=${t.final_net_to_kyle})`);
+    const { id, replaced } = await upsertFinalizedTournament(t);
+    if (replaced) results.push(`Replaced existing ${t.event_name} → id=${id}, net=${t.final_net_to_kyle}`);
+    else results.push(`Created ${t.event_name} (id=${id}, net=${t.final_net_to_kyle})`);
   }
 
   return NextResponse.json({ ok: true, results });

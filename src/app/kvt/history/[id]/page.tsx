@@ -6,9 +6,9 @@ import ActiveBetView from '@/components/kvt/ActiveBetView';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const tournament = getTournamentById(parseInt(id, 10));
+  const tournament = await getTournamentById(parseInt(id, 10));
   if (!tournament) notFound();
-  const matchups = getKvtMatchups(tournament.id);
+  const matchups = await getKvtMatchups(tournament.id);
 
   return (
     <div>

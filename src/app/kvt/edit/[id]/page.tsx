@@ -6,9 +6,9 @@ import { notFound } from 'next/navigation';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const tournament = getTournamentById(parseInt(id, 10));
+  const tournament = await getTournamentById(parseInt(id, 10));
   if (!tournament) notFound();
-  const matchups = getKvtMatchups(tournament.id);
+  const matchups = await getKvtMatchups(tournament.id);
   const events = await getPickableEvents(tournament.year);
   return <NewTournamentForm events={events} editTournament={tournament} editMatchups={matchups} />;
 }

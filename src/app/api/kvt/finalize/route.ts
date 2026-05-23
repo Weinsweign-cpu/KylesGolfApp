@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   const id = Number(url.searchParams.get('id'));
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-  const tournament = getTournamentById(id);
+  const tournament = await getTournamentById(id);
   if (!tournament) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
   // Allow manual net override (for historical tournaments where live data is wrong)
@@ -24,11 +24,11 @@ export async function POST(req: Request) {
       if (body?.results) resultsJson = JSON.stringify(body.results);
     } catch { /* no body or invalid JSON — fine, we'll save without results */ }
 
-    finalizeTournament(id, net, resultsJson);
+    await finalizeTournament(id, net, resultsJson);
     return NextResponse.json({ net_to_kyle: net });
   }
 
-  const matchups = getKvtMatchups(id);
+  const matchups = await getKvtMatchups(id);
 
   try {
     const { performances, actual_winner_name, actual_winner_dg_id } =
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     }));
 
     const result = computeTournament(inputs, actual_winner_name ?? 'TBD', actual_winner_dg_id);
-    finalizeTournament(id, result.net_to_kyle, JSON.stringify(result));
+    await finalizeTournament(id, result.net_to_kyle, JSON.stringify(result));
     return NextResponse.json({ net_to_kyle: result.net_to_kyle });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });

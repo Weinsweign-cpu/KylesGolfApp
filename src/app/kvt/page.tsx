@@ -3,8 +3,8 @@ import { getActiveTournament, getKvtMatchups } from '@/lib/kvt/db';
 import ActiveBetView from '@/components/kvt/ActiveBetView';
 import Link from 'next/link';
 
-export default function Page() {
-  const tournament = getActiveTournament();
+export default async function Page() {
+  const tournament = await getActiveTournament();
   if (!tournament) {
     return (
       <main style={{ padding: '40px', maxWidth: '900px', margin: '0 auto' }}>
@@ -30,6 +30,6 @@ export default function Page() {
     );
   }
 
-  const matchups = getKvtMatchups(tournament.id);
+  const matchups = await getKvtMatchups(tournament.id);
   return <ActiveBetView tournament={tournament} matchups={matchups} />;
 }

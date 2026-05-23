@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
     }
 
-    const id = createTournament({ dg_event_id, year, event_name, course, start_date, matchups });
+    const id = await createTournament({ dg_event_id, year, event_name, course, start_date, matchups });
     return NextResponse.json({ id });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -25,7 +25,7 @@ export async function DELETE(req: Request) {
   try {
     const id = Number(new URL(req.url).searchParams.get('id'));
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    deleteTournament(id);
+    await deleteTournament(id);
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
@@ -39,7 +39,7 @@ export async function PUT(req: Request) {
     if (!id || !Array.isArray(matchups) || matchups.length !== 6) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
     }
-    updateMatchups(Number(id), matchups);
+    await updateMatchups(Number(id), matchups);
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     return NextResponse.json({ error: String(e) }, { status: 500 });

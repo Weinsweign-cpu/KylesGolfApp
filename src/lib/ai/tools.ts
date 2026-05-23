@@ -217,10 +217,10 @@ export async function executeTool(name: string, input: Record<string, unknown>):
       }
 
       case 'get_kvt_state': {
-        const tournament = getActiveTournament();
+        const tournament = await getActiveTournament();
         if (!tournament) return { active_bet: false, message: 'No active Kyle vs Tommy bet' };
 
-        const matchups = getKvtMatchups(tournament.id);
+        const matchups = await getKvtMatchups(tournament.id);
         const { performances, actual_winner_name, actual_winner_dg_id, tournament_complete } =
           await getGolferPerformances(tournament.dg_event_id, tournament.year, matchups);
 

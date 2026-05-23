@@ -74,7 +74,8 @@
       "Bash(node -e \"require\\('@anthropic-ai/sdk'\\); console.log\\('sdk ok'\\)\")",
       "WebFetch(domain:status.railway.app)",
       "WebFetch(domain:status.railway.com)",
-      "Bash(railway whoami *)"
+      "Bash(railway whoami *)",
+      "Bash(npm uninstall *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\weins\\OneDrive - Palus AI\\KylesGolfApp\\src\\app\\api\\player"
