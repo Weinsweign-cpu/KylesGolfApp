@@ -264,48 +264,32 @@ export async function executeTool(name: string, input: Record<string, unknown>):
 
       case 'get_leaderboard': {
         const limit = Math.min((input.limit as number) ?? 20, 50);
-        const events = await getPickableEvents(2026);
-        const current = events.find(e => e.status === 'in_progress')
-          ?? events.find(e => e.status === 'completed' && new Date(e.start_date ?? '0').getTime() > Date.now() - 7 * 86400000);
-        if (!current) return { error: 'No current or recent event to fetch leaderboard for' };
-
         const key = process.env.DATAGOLF_API_KEY;
-        const url = `https://feeds.datagolf.com/historical-raw-data/rounds?tour=pga&event_id=${current.dg_event_id}&year=${current.year}&file_format=json&key=${key}`;
-        const res = await fetch(url, { next: { revalidate: 300 } });
+        // Use the free-tier live-tournament-stats endpoint (event_avg = cumulative)
+        const url = `https://feeds.datagolf.com/preds/live-tournament-stats?stats=sg_total&round=event_avg&display=value&file_format=json&key=${key}`;
+        const res = await fetch(url, { next: { revalidate: 120 } });
         if (!res.ok) return { error: `Leaderboard fetch failed: ${res.status}` };
         const data = await res.json();
 
-        const byPlayer = new Map<number, { dg_id: number; name: string; fin_text: string; total: number; rounds: number }>();
-        for (const entry of (data.scores ?? [])) {
-          const existing = byPlayer.get(entry.dg_id);
-          const rd = entry.round_num ?? 0;
-          const score = entry.round_score;
-          if (!existing || rd > existing.rounds) {
-            byPlayer.set(entry.dg_id, {
-              dg_id: entry.dg_id,
-              name: formatName(entry.player_name),
-              fin_text: entry.fin_text ?? '',
-              total: (existing?.total ?? 0) + (typeof score === 'number' ? score : 0),
-              rounds: rd,
-            });
-          } else if (typeof score === 'number') {
-            existing.total = (existing.total ?? 0) + score;
-            if (entry.fin_text) existing.fin_text = entry.fin_text;
-          }
-        }
-
-        const board = [...byPlayer.values()]
-          .filter(p => !/^(MC|CUT|WD|DQ)$/i.test(p.fin_text))
-          .sort((a, b) => (a.total ?? 999) - (b.total ?? 999))
+        const stats = (data.live_stats ?? []) as Record<string, unknown>[];
+        const board = stats
+          .filter(e => !/^(MC|CUT|WD|DQ)$/i.test(String(e.position ?? '').trim()))
+          .filter(e => e.position != null && String(e.position).trim() !== '')
+          .sort((a, b) => {
+            const pa = String(a.position ?? '999').replace(/[^0-9]/g, '') || '999';
+            const pb = String(b.position ?? '999').replace(/[^0-9]/g, '') || '999';
+            return Number(pa) - Number(pb);
+          })
           .slice(0, limit)
-          .map(p => ({
-            position: p.fin_text || '—',
-            player: p.name,
-            total: p.total,
-            rounds_played: p.rounds,
+          .map(e => ({
+            position: String(e.position ?? '—'),
+            player: formatName(String(e.player_name ?? '')),
+            total: e.total != null ? Number(e.total) : null,
+            thru: e.thru != null ? Number(e.thru) : null,
+            today: e.round != null ? Number(e.round) : null,
           }));
 
-        return { event_name: current.event_name, leaderboard: board };
+        return { event_name: String(data.event_name ?? 'Current Event'), leaderboard: board };
       }
 
       default:
