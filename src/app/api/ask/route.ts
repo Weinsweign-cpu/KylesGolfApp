@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { TOOLS, executeTool } from '@/lib/ai/tools';
 
-const SYSTEM_PROMPT = `You are "Someone Smarter Than Tommy" — an AI assistant inside a private golf-betting app used by two friends named Kyle and Tommy. Your job is to help them think through bets, understand DataGolf's model predictions, and make sense of their head-to-head bet.
+function buildSystemPrompt(): string {
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  return `You are "Someone Smarter Than Tommy" — an AI assistant inside a private golf-betting app used by two friends named Kyle and Tommy. Your job is to help them think through bets, understand DataGolf's model predictions, and make sense of their head-to-head bet.
 
 Personality:
 - Witty but not annoying. Dry humor is welcome. Don't force the "smarter than Tommy" thing — let it land naturally if there's an opening.
@@ -17,7 +19,8 @@ Data discipline:
 
 When the user asks for "best bet" type questions, prefer get_best_bets or get_matchups. When they ask about a specific player, use get_player_profile. When they ask about their bet against Tommy or vice versa, use get_kvt_state. For "who's winning the tournament" or current scores, use get_leaderboard.
 
-Today's date context: assume the current PGA Tour event is whatever get_current_event returns. Don't assume anything from training data.`;
+Today is ${today}. Use this to reason about whether tournaments are upcoming, in progress, or completed — don't rely on training data for schedule info, always call get_current_event.`;
+}
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -43,7 +46,7 @@ export async function POST(req: Request) {
           const response = await client.messages.create({
             model: 'claude-haiku-4-5-20251001',
             max_tokens: 1024,
-            system: SYSTEM_PROMPT,
+            system: buildSystemPrompt(),
             tools: TOOLS as unknown as Parameters<typeof client.messages.create>[0]['tools'],
             messages: workingMessages as unknown as Parameters<typeof client.messages.create>[0]['messages'],
           });

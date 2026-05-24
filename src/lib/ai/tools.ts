@@ -95,12 +95,21 @@ export async function executeTool(name: string, input: Record<string, unknown>):
     switch (name) {
       case 'get_current_event': {
         const events = await getPickableEvents(2026);
-        const inProgress = events.find(e => e.status === 'in_progress');
-        if (inProgress) return { ...inProgress, why: 'currently playing' };
+        const now = Date.now();
+
+        // DataGolf sometimes lags on status — treat any "upcoming" event whose
+        // start date has already passed as in_progress
+        const inProgress = events.find(e => e.status === 'in_progress')
+          ?? events
+              .filter(e => e.status === 'upcoming' && new Date(e.start_date ?? '9999').getTime() <= now)
+              .sort((a, b) => new Date(b.start_date ?? '0').getTime() - new Date(a.start_date ?? '0').getTime())[0];
+        if (inProgress) return { ...inProgress, status: 'in_progress', why: 'currently playing' };
+
         const upcoming = events
-          .filter(e => e.status === 'upcoming')
+          .filter(e => e.status === 'upcoming' && new Date(e.start_date ?? '9999').getTime() > now)
           .sort((a, b) => new Date(a.start_date ?? '9999').getTime() - new Date(b.start_date ?? '9999').getTime())[0];
         if (upcoming) return { ...upcoming, why: 'next upcoming event' };
+
         const recent = events
           .filter(e => e.status === 'completed')
           .sort((a, b) => new Date(b.start_date ?? '0').getTime() - new Date(a.start_date ?? '0').getTime())[0];
