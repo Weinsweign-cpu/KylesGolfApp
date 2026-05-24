@@ -223,6 +223,7 @@ export async function upsertFinalizedTournament(t: {
   course: string;
   start_date: string;
   final_net_to_kyle: number;
+  final_results_json?: string;
   matchups: Array<{
     matchup_num: number;
     kyle_dg_id: number;
@@ -249,9 +250,9 @@ export async function upsertFinalizedTournament(t: {
     }
 
     const row = await tx.execute({
-      sql: `INSERT INTO kvt_tournaments (dg_event_id, year, event_name, course, start_date, status, finalized_at, final_net_to_kyle)
-            VALUES (?, ?, ?, ?, ?, 'finalized', datetime('now'), ?)`,
-      args: [t.dg_event_id, t.year, t.event_name, t.course, t.start_date, t.final_net_to_kyle],
+      sql: `INSERT INTO kvt_tournaments (dg_event_id, year, event_name, course, start_date, status, finalized_at, final_net_to_kyle, final_results_json)
+            VALUES (?, ?, ?, ?, ?, 'finalized', datetime('now'), ?, ?)`,
+      args: [t.dg_event_id, t.year, t.event_name, t.course, t.start_date, t.final_net_to_kyle, t.final_results_json ?? null],
     });
     const tid = Number(row.lastInsertRowid);
 

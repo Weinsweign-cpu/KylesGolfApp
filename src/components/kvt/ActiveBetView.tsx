@@ -186,7 +186,7 @@ function FinalizedView({ tournament, matchups }: { tournament: KvtTournament; ma
               <div className="font-mono" style={{ fontSize: '9px', color: 'var(--text-tertiary)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '8px' }}>Low Score ($20)</div>
               {storedResult.low_score.player_name ? (
                 <>
-                  <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{storedResult.low_score.player_name}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{formatN(storedResult.low_score.player_name)}</div>
                   <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                     {scoreStr(storedResult.low_score.score)} total · owned by {storedResult.low_score.owner === 'void' ? 'both' : storedResult.low_score.owner}
                   </div>
@@ -200,7 +200,7 @@ function FinalizedView({ tournament, matchups }: { tournament: KvtTournament; ma
             </div>
             <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px' }}>
               <div className="font-mono" style={{ fontSize: '9px', color: 'var(--text-tertiary)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '8px' }}>Tournament Winner ($20)</div>
-              <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{storedResult.tournament_winner.player_name}</div>
+              <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{formatN(storedResult.tournament_winner.player_name)}</div>
               <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                 {storedResult.tournament_winner.was_drafted ? `drafted by ${storedResult.tournament_winner.owner}` : 'not drafted'}
               </div>
