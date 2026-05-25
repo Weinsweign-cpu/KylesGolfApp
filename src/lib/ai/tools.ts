@@ -1,6 +1,6 @@
 import 'server-only';
-import { getPickableEvents } from '@/lib/datagolf';
-import { getActiveTournament, getKvtMatchups, getTournaments } from '@/lib/kvt/db';
+import { getPickableEvents, getPredictionsForEvent, getOutrights, getMatchups, getPlayerProfile, type OutrightMarket, type MatchupMarket } from '@/lib/datagolf';
+import { getActiveTournament, getKvtMatchups } from '@/lib/kvt/db';
 import { getGolferPerformances } from '@/lib/kvt/data';
 import { computeTournament } from '@/lib/kvt/scoring';
 
@@ -90,7 +90,6 @@ export const TOOLS = [
 ] as const;
 
 export async function executeTool(name: string, input: Record<string, unknown>): Promise<unknown> {
-  const base = `http://localhost:${process.env.PORT ?? 3000}`;
   try {
     switch (name) {
       case 'get_current_event': {
@@ -118,8 +117,7 @@ export async function executeTool(name: string, input: Record<string, unknown>):
 
       case 'get_predictions': {
         const limit = Math.min((input.limit as number) ?? 15, 50);
-        const res = await fetch(`${base}/api/predictions?event=current`, { cache: 'no-store' });
-        const data = await res.json();
+        const data = await getPredictionsForEvent('current');
         if ('error' in data) return { error: data.error };
         const players = (data.baseline_history_fit ?? data.baseline ?? []) as Record<string, unknown>[];
         return {
@@ -141,24 +139,23 @@ export async function executeTool(name: string, input: Record<string, unknown>):
       case 'get_best_bets': {
         const minEV = ((input.min_ev as number) ?? 0) / 100;
         const markets = input.market === 'all'
-          ? ['win', 'top_5', 'top_10', 'top_20', 'make_cut']
-          : [input.market as string];
+          ? (['win', 'top_5', 'top_10', 'top_20', 'make_cut'] as OutrightMarket[])
+          : [input.market as OutrightMarket];
 
         const results: unknown[] = [];
         for (const m of markets) {
-          const res = await fetch(`${base}/api/outrights?market=${m}`, { cache: 'no-store' });
-          const data = await res.json();
+          const data = await getOutrights(m);
           if ('error' in data) continue;
-          const top = ((data.picks ?? []) as Record<string, unknown>[])
-            .filter(p => (p.best_ev as number) > minEV)
+          const top = data.picks
+            .filter(p => p.best_ev > minEV)
             .slice(0, 5)
             .map(p => ({
-              player: formatName(p.player_name as string),
+              player: formatName(p.player_name),
               market: m,
-              model_pct: round((p.model_prob as number) * 100, 1),
+              model_pct: round(p.model_prob * 100, 1),
               best_book: p.best_book,
-              decimal_odds: round(p.best_odds as number, 2),
-              ev_pct: round((p.best_ev as number) * 100, 2),
+              decimal_odds: round(p.best_odds, 2),
+              ev_pct: round(p.best_ev * 100, 2),
             }));
           results.push(...top);
         }
@@ -171,16 +168,15 @@ export async function executeTool(name: string, input: Record<string, unknown>):
 
       case 'get_matchups': {
         const minEV = ((input.min_ev as number) ?? 5) / 100;
-        const res = await fetch(`${base}/api/matchups?market=${input.market}`, { cache: 'no-store' });
-        const data = await res.json();
+        const data = await getMatchups(input.market as MatchupMarket);
         if ('error' in data) return { error: data.error };
-        const top = ((data.matchups ?? []) as Record<string, unknown>[])
-          .filter(m => (m.best_ev as number) > minEV)
+        const top = data.matchups
+          .filter(m => m.best_ev > minEV)
           .slice(0, 8)
           .map(m => ({
-            matchup: (m.players as Record<string, unknown>[]).map(p => formatName(p.player_name as string)).join(' vs '),
-            best_slot: formatName(((m.players as Record<string, unknown>[])[m.best_ev_slot as number] as Record<string, unknown>)?.player_name as string ?? ''),
-            ev_pct: round((m.best_ev as number) * 100, 2),
+            matchup: m.players.map(p => formatName(p.player_name)).join(' vs '),
+            best_slot: formatName(m.players[m.best_ev_slot]?.player_name ?? ''),
+            ev_pct: round(m.best_ev * 100, 2),
             book: m.best_ev_book,
           }));
         return {
@@ -192,8 +188,7 @@ export async function executeTool(name: string, input: Record<string, unknown>):
       }
 
       case 'get_player_profile': {
-        const predRes = await fetch(`${base}/api/predictions?event=current`, { cache: 'no-store' });
-        const pred = await predRes.json();
+        const pred = await getPredictionsForEvent('current');
         if ('error' in pred) return { error: 'No active event field available' };
         const field = (pred.baseline_history_fit ?? pred.baseline ?? []) as Record<string, unknown>[];
         const search = String(input.player_name).toLowerCase().trim();
@@ -203,14 +198,11 @@ export async function executeTool(name: string, input: Record<string, unknown>):
         });
         if (!player) return { error: `Player "${input.player_name}" not found in current field` };
 
-        const res = await fetch(`${base}/api/player/${player.dg_id}`, { cache: 'no-store' });
-        const profile = await res.json();
-        if ('error' in profile) return { error: profile.error };
-
+        const profile = await getPlayerProfile(Number(player.dg_id));
         const r = profile.skillRating;
         const d = profile.decomposition;
         return {
-          player: formatName(profile.player_name as string),
+          player: formatName(profile.player_name),
           sg_off_tee: r?.sg_ott != null ? round(r.sg_ott, 2) : null,
           sg_approach: r?.sg_app != null ? round(r.sg_app, 2) : null,
           sg_around_green: r?.sg_arg != null ? round(r.sg_arg, 2) : null,
